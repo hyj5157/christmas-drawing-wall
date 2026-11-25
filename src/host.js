@@ -12,9 +12,25 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-export function initHostMode(wsClient) {
+export function initHostMode(wsClient, options = {}) {
+  const isReadonly = Boolean(options.readonly);
   const hostView = document.getElementById("host-view");
   hostView.classList.remove("hidden");
+
+  const hostHudEl = document.querySelector(".host-hud");
+  if (isReadonly) {
+    // 참가자 구경 모드(/view): 호스트 컨트롤(주제/초기화 등)만 숨기고 DOM 요소는 유지해 null 에러 방지
+    if (hostHudEl) {
+      hostHudEl.querySelectorAll("span, button").forEach((el) => el.classList.add("hidden"));
+      const backBtn = document.createElement("button");
+      backBtn.type = "button";
+      backBtn.className = "hud-btn primary";
+      backBtn.textContent = "✏️ 그림 그리러 가기";
+      backBtn.addEventListener("click", () => { window.location.href = "/draw"; });
+      hostHudEl.appendChild(backBtn);
+    }
+    document.getElementById("mini-qr-card")?.classList.add("hidden");
+  }
 
   const canvas = document.getElementById("wall-canvas");
   const ctx = canvas.getContext("2d");

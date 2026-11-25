@@ -578,7 +578,7 @@ export function resolveThemeDisplay(themeIds) {
     id: "mixed",
     name: ids.length >= 3 ? "🎉 전체 주제" : names,
     title: hasChristmas ? "Merry Christmas" : "Drawing Party",
-    introPrompt: "원하는 도안을 골라 그림을 남겨주세요",
+    introPrompt: "방명록에 나만의 그림을 남겨주세요 ✨",
     bgTop: hasChristmas ? "#174b3d" : "#2c244d",
     bgBottom: hasChristmas ? "#0b2920" : "#161229",
   };

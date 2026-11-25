@@ -63,8 +63,9 @@ const params = new URLSearchParams(window.location.search);
 const modeParam = params.get("mode");
 const pathName = window.location.pathname.replace(/\/+$/, "");
 const isHostPath = pathName === "/host" || modeParam === "host";
+const isViewPath = pathName === "/view" || modeParam === "view";
 const isDrawPath = pathName === "/draw" || modeParam === "draw";
-const isMobileDevice = window.innerWidth < 768 && !isHostPath;
+const isMobileDevice = window.innerWidth < 768 && !isHostPath && !isViewPath;
 const isDrawMode = isDrawPath || isMobileDevice;
 
 const wsClient = createWSClient();
@@ -73,5 +74,5 @@ const ownerId = getOwnerId();
 if (isDrawMode) {
   initMobileMode(wsClient, ownerId);
 } else {
-  initHostMode(wsClient);
+  initHostMode(wsClient, { readonly: isViewPath });
 }

@@ -622,7 +622,7 @@ export function initMobileMode(wsClient, ownerId) {
     for (const orn of sorted) voteGrid.appendChild(createVoteCard(orn));
   }
 
-  btnViewWall.addEventListener("click", () => { window.location.href = "/host"; });
+  btnViewWall.addEventListener("click", () => { window.location.href = "/view"; });
 
   window.addEventListener("resize", () => {
     if (currentStep === 2) renderColorPreview();
