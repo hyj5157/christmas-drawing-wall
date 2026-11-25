@@ -60,7 +60,7 @@ function attachChristmasWallWS(httpServer) {
   const clients = new Set();
   const ornaments = new Map();
   let nextNum = 1;
-  let currentThemeId = "christmas";
+  let currentThemeIds = ["christmas"];
 
   function serializeOrnament(o) {
     return {
@@ -94,7 +94,7 @@ function attachChristmasWallWS(httpServer) {
 
   wss.on("connection", (ws) => {
     clients.add(ws);
-    ws.send(JSON.stringify({ type: "init", clientCount: clients.size, themeId: currentThemeId, ornaments: [...ornaments.values()].map(serializeOrnament) }));
+    ws.send(JSON.stringify({ type: "init", clientCount: clients.size, themeIds: currentThemeIds, themeId: currentThemeIds[0], ornaments: [...ornaments.values()].map(serializeOrnament) }));
     broadcast({ type: "client_count", clientCount: clients.size }, ws);
 
     ws.on("message", (buf) => {
@@ -106,7 +106,7 @@ function attachChristmasWallWS(httpServer) {
         const ornament = {
           id,
           ownerId: String(msg.ownerId || "").slice(0, 64),
-          themeId: String(msg.themeId || currentThemeId).slice(0, 24),
+          themeId: String(msg.themeId || currentThemeIds[0] || "christmas").slice(0, 24),
           templateId: String(msg.templateId || "stocking").slice(0, 32),
           baseColor: String(msg.baseColor || "#e63946").slice(0, 20),
           clipToTemplate: typeof msg.clipToTemplate === "boolean" ? msg.clipToTemplate : undefined,
@@ -127,11 +127,19 @@ function attachChristmasWallWS(httpServer) {
         else orn.voters.add(voterId);
         broadcast({ type: "vote_updated", ornamentId: orn.id, votes: orn.voters.size, voterIds: [...orn.voters] });
       } else if (msg.type === "set_theme") {
-        const allowed = new Set(["christmas", "face", "animal", "party"]);
-        if (!allowed.has(String(msg.themeId))) return;
-        currentThemeId = String(msg.themeId);
+        const allowed = new Set(["christmas", "face", "animal"]);
+        let nextIds = [];
+        if (Array.isArray(msg.themeIds)) {
+          nextIds = [...new Set(msg.themeIds.map(String).filter((id) => allowed.has(id)))];
+        } else if (msg.themeId === "party") {
+          nextIds = ["christmas", "face", "animal"];
+        } else if (allowed.has(String(msg.themeId))) {
+          nextIds = [String(msg.themeId)];
+        }
+        if (nextIds.length === 0) return;
+        currentThemeIds = nextIds;
         if (msg.clearBoard) { ornaments.clear(); nextNum = 1; broadcast({ type: "board_reset" }); }
-        broadcast({ type: "theme_changed", themeId: currentThemeId });
+        broadcast({ type: "theme_changed", themeIds: currentThemeIds, themeId: currentThemeIds[0] });
       } else if (msg.type === "nudge_ornament") {
         const id = String(msg.id || "");
         if (!ornaments.has(id)) return;

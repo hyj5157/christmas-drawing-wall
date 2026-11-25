@@ -44,12 +44,18 @@
       <div class="modal-card theme-modal-card">
         <button type="button" class="modal-close" id="close-theme-modal">✕</button>
         <h2 class="modal-title">🎨 그림 주제 선택</h2>
-        <p class="modal-sub">QR을 공유하기 전에 참여자들이 그릴 주제를 선택하세요!</p>
+        <p class="modal-sub">참여자에게 열어줄 주제를 1개 이상 선택하세요! (복수 선택 가능)</p>
         <div id="theme-grid" class="theme-grid"></div>
-        <label class="theme-clear-opt">
-          <input type="checkbox" id="chk-clear-on-theme" />
-          <span>주제 바꿀 때 기존 보드 비우기</span>
-        </label>
+        <div class="theme-modal-footer">
+          <label class="theme-clear-opt">
+            <input type="checkbox" id="chk-clear-on-theme" />
+            <span>주제 바꿀 때 기존 보드 비우기</span>
+          </label>
+          <div class="theme-modal-actions">
+            <button type="button" id="btn-theme-select-all" class="hud-btn">전체 선택</button>
+            <button type="button" id="btn-theme-apply" class="hud-btn primary">적용하기 ✨</button>
+          </div>
+        </div>
       </div>
     </div>
 
