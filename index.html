@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Merry Christmas - 다중 접속 그림 방명록</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <!-- ==================== HOST / SHARED WALL VIEW ==================== -->
+  <div id="host-view" class="view hidden">
+    <canvas id="wall-canvas"></canvas>
+
+    <!-- 상단 타이틀 (주제에 따라 동적 변경) -->
+    <div class="wall-title-wrap">
+      <h1 class="merry-title" id="wall-title">Merry Christmas</h1>
+    </div>
+
+    <!-- 우측 하단 미니멀 호스트 컨트롤 -->
+    <header class="host-hud">
+      <span class="stat-pill" id="host-client-count">접속 0명</span>
+      <span class="stat-pill" id="host-ornament-count">작품 0개</span>
+      <button type="button" id="btn-show-theme" class="hud-btn">🎨 주제: 크리스마스</button>
+      <button type="button" id="btn-show-qr" class="hud-btn primary">📱 QR 크게</button>
+      <button type="button" id="btn-open-draw" class="hud-btn">✏️ 그리기</button>
+      <button type="button" id="btn-show-ranking" class="hud-btn gold">🏆 1~3등 발표</button>
+      <button type="button" id="btn-save-image" class="hud-btn">📸 화면 저장</button>
+      <button type="button" id="btn-sound" class="hud-btn">🔊 소리 ON</button>
+      <button type="button" id="btn-fullscreen" class="hud-btn">⛶ 전체화면</button>
+      <button type="button" id="btn-reset-board" class="hud-btn danger">🔄 초기화</button>
+    </header>
+
+    <!-- 좌측 하단 QR 코드 카드 -->
+    <div id="mini-qr-card" class="mini-qr-card" title="클릭하면 QR 코드를 크게 봅니다">
+      <canvas id="mini-qr-canvas"></canvas>
+      <span class="mini-qr-label">QR 찍고 함께 그리기</span>
+    </div>
+
+    <!-- 주제 선택 모달 -->
+    <div id="theme-modal" class="modal-backdrop hidden">
+      <div class="modal-card theme-modal-card">
+        <button type="button" class="modal-close" id="close-theme-modal">✕</button>
+        <h2 class="modal-title">🎨 그림 주제 선택</h2>
+        <p class="modal-sub">QR을 공유하기 전에 참여자들이 그릴 주제를 선택하세요!</p>
+        <div id="theme-grid" class="theme-grid"></div>
+        <label class="theme-clear-opt">
+          <input type="checkbox" id="chk-clear-on-theme" />
+          <span>주제 바꿀 때 기존 보드 비우기</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 1~3등 호감 투표 결과 모달 -->
+    <div id="ranking-modal" class="modal-backdrop hidden">
+      <div class="modal-card ranking-modal-card">
+        <button type="button" class="modal-close" id="close-ranking-modal">✕</button>
+        <h2 class="modal-title">🏆 실시간 호감 투표 TOP 3</h2>
+        <p class="modal-sub">참여자들이 뽑은 가장 인기 있는 작품 1~3등입니다!</p>
+        <div id="ranking-podium" class="ranking-podium"></div>
+        <div id="ranking-rest" class="ranking-rest"></div>
+      </div>
+    </div>
+
+    <!-- 큰 QR 모달 -->
+    <div id="qr-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <button type="button" class="modal-close" id="close-qr-modal">✕</button>
+        <h2 class="modal-title">📱 QR 찍고 그림 남기기!</h2>
+        <p class="modal-sub">현재 주제: <strong id="qr-current-theme">🎄 크리스마스</strong> <button type="button" id="btn-qr-change-theme" class="inline-link-btn">변경</button></p>
+        <div class="qr-box">
+          <canvas id="large-qr-canvas"></canvas>
+        </div>
+        <div class="qr-link-row">
+          <input type="text" id="qr-link-input" readonly />
+          <button type="button" id="btn-copy-link" class="hud-btn primary">링크 복사</button>
+        </div>
+        <p class="qr-tip">💡 같은 Wi-Fi 또는 외부 공유 링크로 여러 명이 동시에 접속할 수 있습니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MOBILE / DRAW CLIENT VIEW ==================== -->
+  <div id="mobile-view" class="view hidden">
+    <header class="mobile-header">
+      <div class="mobile-title" id="mobile-header-title">Merry Christmas</div>
+      <div class="step-dots" id="mobile-step-dots">
+        <span class="step-dot active" data-step="1"></span>
+        <span class="step-dot" data-step="2"></span>
+        <span class="step-dot" data-step="3"></span>
+        <span class="step-dot" data-step="4"></span>
+      </div>
+    </header>
+
+    <!-- Step 0: 인트로 화면 -->
+    <section id="step-intro" class="mobile-step intro-step">
+      <div class="intro-center">
+        <div class="intro-illustration-wrap">
+          <canvas id="intro-preview-canvas"></canvas>
+        </div>
+        <p class="intro-prompt" id="intro-prompt">크리스마스 방명록을 남겨주세요</p>
+      </div>
+      <div class="intro-actions">
+        <button type="button" id="btn-start-draw" class="m-btn primary start-btn">시작하기</button>
+        <button type="button" id="btn-intro-vote" class="m-btn secondary vote-entry-btn">❤️ 다른 사람 그림 투표하기</button>
+      </div>
+    </section>
+
+    <!-- Step 1: 도안 선택 -->
+    <section id="step-template" class="mobile-step hidden">
+      <p class="step-prompt">원하는 모양을 골라보세요!</p>
+      <div id="template-grid" class="template-grid"></div>
+    </section>
+
+    <!-- Step 2: 색상 선택 -->
+    <section id="step-color" class="mobile-step hidden">
+      <p class="step-prompt">색상을 선택해주세요</p>
+      <div class="stage-frame">
+        <div class="dashed-box">
+          <canvas id="color-preview-canvas"></canvas>
+        </div>
+      </div>
+      <div id="base-color-palette" class="color-palette"></div>
+      <div class="step-actions">
+        <button type="button" id="btn-step2-back" class="m-btn secondary">이전</button>
+        <button type="button" id="btn-step2-next" class="m-btn primary">다음</button>
+      </div>
+    </section>
+
+    <!-- Step 2.5: 직접 얼굴/모양 윤곽 그리기 -->
+    <section id="step-shape" class="mobile-step hidden">
+      <p class="step-prompt">원하는 얼굴 모양을 한 번에 그려보세요!</p>
+      <div class="stage-frame">
+        <div class="dashed-box draw-box">
+          <canvas id="shape-canvas"></canvas>
+        </div>
+      </div>
+      <div class="step-actions">
+        <button type="button" id="btn-shape-back" class="m-btn secondary">이전</button>
+        <button type="button" id="btn-shape-retry" class="m-btn secondary">다시 그리기</button>
+        <button type="button" id="btn-shape-next" class="m-btn primary">다음</button>
+      </div>
+    </section>
+
+    <!-- Step 3: 직접 꾸미기 / 그리기 -->
+    <section id="step-draw" class="mobile-step hidden">
+      <div class="draw-top-bar">
+        <button type="button" id="btn-step3-back" class="icon-pill">◀ 이전</button>
+        <div class="draw-tools-right">
+          <button type="button" id="btn-undo" class="icon-pill">↩ 되돌리기</button>
+          <button type="button" id="btn-clear" class="icon-pill">🗑 지우기</button>
+        </div>
+      </div>
+
+      <div class="stage-frame draw-frame">
+        <div class="dashed-box draw-box">
+          <canvas id="draw-canvas"></canvas>
+        </div>
+      </div>
+
+      <div class="draw-controls">
+        <div class="brush-row">
+          <div id="brush-color-palette" class="color-palette compact"></div>
+          <div class="brush-sizes">
+            <button type="button" class="brush-size-btn" data-size="4" title="얇게"><span class="dot s"></span></button>
+            <button type="button" class="brush-size-btn active" data-size="7" title="보통"><span class="dot m"></span></button>
+            <button type="button" class="brush-size-btn" data-size="13" title="굵게"><span class="dot l"></span></button>
+          </div>
+        </div>
+
+        <div class="submit-inputs">
+          <input type="text" id="author-input" maxlength="14" placeholder="닉네임 (선택)" />
+          <input type="text" id="bubble-input" maxlength="24" placeholder="말풍선 한마디 (선택)" />
+        </div>
+        <div class="submit-row">
+          <button type="button" id="btn-submit-ornament" class="m-btn primary submit-btn full">보내기 ✨</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 4: DONE! -->
+    <section id="step-done" class="mobile-step hidden">
+      <div class="done-wrap">
+        <h2 class="done-title">DONE!</h2>
+        <div class="done-preview-card">
+          <canvas id="done-preview-canvas"></canvas>
+        </div>
+        <p class="done-sub">공유 보드에 내 그림이 올라갔어요!</p>
+        <div class="step-actions">
+          <button type="button" id="btn-draw-another" class="m-btn primary">하나 더 그리기</button>
+          <button type="button" id="btn-done-vote" class="m-btn secondary">❤️ 투표하기</button>
+          <button type="button" id="btn-view-wall" class="m-btn secondary">보드 보기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 5: 호감 투표하기 -->
+    <section id="step-vote" class="mobile-step hidden">
+      <div class="draw-top-bar">
+        <button type="button" id="btn-vote-back" class="icon-pill">◀ 돌아가기</button>
+        <span class="vote-hint">마음에 드는 그림에 ❤️를 눌러주세요!</span>
+      </div>
+      <div id="vote-grid" class="vote-grid"></div>
+    </section>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
