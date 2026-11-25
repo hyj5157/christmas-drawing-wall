@@ -559,6 +559,31 @@ export function getTemplatesForTheme(themeId) {
   return list.length > 0 ? list : TEMPLATES;
 }
 
+export function getTemplatesForThemes(themeIds) {
+  if (!Array.isArray(themeIds) || themeIds.length === 0) return TEMPLATES;
+  if (themeIds.includes("party")) return TEMPLATES;
+  const set = new Set(themeIds);
+  const list = TEMPLATES.filter((t) => set.has(t.theme));
+  return list.length > 0 ? list : TEMPLATES;
+}
+
+export function resolveThemeDisplay(themeIds) {
+  const ids = Array.isArray(themeIds) && themeIds.length > 0 ? themeIds : ["christmas"];
+  if (ids.length === 1) {
+    return getThemeById(ids[0]);
+  }
+  const names = ids.map((id) => getThemeById(id).name).join(" + ");
+  const hasChristmas = ids.includes("christmas");
+  return {
+    id: "mixed",
+    name: ids.length >= 3 ? "🎉 전체 주제" : names,
+    title: hasChristmas ? "Merry Christmas" : "Drawing Party",
+    introPrompt: "원하는 도안을 골라 그림을 남겨주세요",
+    bgTop: hasChristmas ? "#174b3d" : "#2c244d",
+    bgBottom: hasChristmas ? "#0b2920" : "#161229",
+  };
+}
+
 export function getTemplateById(id) {
   return TEMPLATES.find((t) => t.id === id) || TEMPLATES[0];
 }

@@ -3,8 +3,8 @@ import {
   BRUSH_COLORS,
   buildCustomShapePath,
   getTemplateById,
-  getTemplatesForTheme,
-  getThemeById,
+  getTemplatesForThemes,
+  resolveThemeDisplay,
   renderOrnament,
 } from "./templates.js";
 import { playDoneJingle, playPop } from "./sound.js";
@@ -105,7 +105,7 @@ export function initMobileMode(wsClient, ownerId) {
   const btnDrawAnother = document.getElementById("btn-draw-another");
   const btnViewWall = document.getElementById("btn-view-wall");
 
-  let currentThemeId = "christmas";
+  let currentThemeIds = ["christmas"];
   let currentStep = 0;
   let selectedTemplateId = "stocking";
   let selectedBaseColor = "#e63946";
@@ -120,17 +120,17 @@ export function initMobileMode(wsClient, ownerId) {
   let voteReturnStep = 0;
   const voteBtnMap = new Map();
 
-  function applyTheme(themeId) {
-    currentThemeId = themeId || "christmas";
-    const theme = getThemeById(currentThemeId);
+  function applyTheme(themeIds) {
+    currentThemeIds = Array.isArray(themeIds) && themeIds.length > 0 ? themeIds : ["christmas"];
+    const theme = resolveThemeDisplay(currentThemeIds);
     mobileView.style.background = `radial-gradient(circle at 50% 15%, ${theme.bgTop}, ${theme.bgBottom} 85%)`;
     if (mobileHeaderTitle) mobileHeaderTitle.textContent = theme.title;
     if (introPromptEl) introPromptEl.textContent = theme.introPrompt;
 
-    brushColor = currentThemeId === "christmas" ? "#ffffff" : "#1f2933";
+    brushColor = currentThemeIds.length === 1 && currentThemeIds[0] === "christmas" ? "#ffffff" : "#1f2933";
     syncBrushColorSelection();
 
-    const list = getTemplatesForTheme(currentThemeId);
+    const list = getTemplatesForThemes(currentThemeIds);
     if (!list.some((t) => t.id === selectedTemplateId)) {
       selectedTemplateId = list[0].id;
       selectedBaseColor = list[0].defaultColor;
@@ -142,7 +142,11 @@ export function initMobileMode(wsClient, ownerId) {
 
   function renderIntroPreview() {
     if (!introPreviewCanvas) return;
-    const samples = INTRO_SAMPLES[currentThemeId] || INTRO_SAMPLES.face;
+    const pool = [];
+    for (const id of currentThemeIds) {
+      if (INTRO_SAMPLES[id]) pool.push(...INTRO_SAMPLES[id]);
+    }
+    const samples = pool.length > 0 ? pool : INTRO_SAMPLES.christmas;
     const sample = samples[introSampleIdx % samples.length];
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const size = 210;
@@ -193,7 +197,7 @@ export function initMobileMode(wsClient, ownerId) {
 
   function buildTemplateGrid() {
     templateGrid.innerHTML = "";
-    const list = getTemplatesForTheme(currentThemeId);
+    const list = getTemplatesForThemes(currentThemeIds);
     for (const tpl of list) {
       const card = document.createElement("button");
       card.type = "button";
@@ -518,7 +522,7 @@ export function initMobileMode(wsClient, ownerId) {
     wsClient.send({
       type: "submit_ornament",
       ownerId,
-      themeId: currentThemeId,
+      themeId: tpl.theme || currentThemeIds[0] || "christmas",
       templateId: selectedTemplateId,
       baseColor: selectedBaseColor,
       clipToTemplate: tpl.clipToTemplate,
@@ -627,11 +631,11 @@ export function initMobileMode(wsClient, ownerId) {
 
   wsClient.onMessage((msg) => {
     if (msg.type === "init") {
-      if (msg.themeId) applyTheme(msg.themeId);
+      if (msg.themeIds || msg.themeId) applyTheme(msg.themeIds || [msg.themeId]);
       boardOrnaments = msg.ornaments || [];
       if (currentStep === 5) renderVoteGrid();
-    } else if (msg.type === "theme_changed" && msg.themeId) {
-      applyTheme(msg.themeId);
+    } else if (msg.type === "theme_changed" && (msg.themeIds || msg.themeId)) {
+      applyTheme(msg.themeIds || [msg.themeId]);
     } else if (msg.type === "ornament_added" && msg.ornament) {
       if (!boardOrnaments.some((o) => o.id === msg.ornament.id)) {
         boardOrnaments.push(msg.ornament);
@@ -657,6 +661,6 @@ export function initMobileMode(wsClient, ownerId) {
   buildBaseColorPalette();
   buildBrushPalette();
   syncBaseColorSelection();
-  applyTheme("christmas");
+  applyTheme(["christmas"]);
   goStep(0);
 }

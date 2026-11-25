@@ -111,15 +111,20 @@ input { user-select: text; }
 }
 
 .theme-modal-card { max-width: 520px; }
-.theme-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.theme-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 14px; }
 .theme-option-card {
   appearance: none; border: 2px solid #e2e8f0; background: #f8fafc; border-radius: 16px;
-  padding: 14px 12px; text-align: left; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+  padding: 14px 14px; text-align: left; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
 }
 .theme-option-card:hover { border-color: #94a3b8; transform: translateY(-1px); }
 .theme-option-card.active { border-color: #0f382d; background: #ecfdf5; box-shadow: 0 0 0 3px rgba(230, 184, 106, 0.45); }
-.theme-option-name { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+.theme-option-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.theme-option-name { font-size: 16px; font-weight: 800; color: #0f172a; }
+.theme-check-pill { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: #e2e8f0; color: #475569; }
+.theme-option-card.active .theme-check-pill { background: #0f382d; color: #ffffff; }
 .theme-option-desc { font-size: 12px; color: #475569; line-height: 1.35; }
+.theme-modal-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
+.theme-modal-actions { display: flex; gap: 8px; }
 .theme-clear-opt { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #475569; cursor: pointer; }
 
 .ranking-modal-card { max-width: 680px; max-height: 88vh; overflow-y: auto; }

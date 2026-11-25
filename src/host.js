@@ -1,5 +1,5 @@
 import QRCode from "qrcode";
-import { THEMES, getThemeById, renderOrnament } from "./templates.js";
+import { THEMES, resolveThemeDisplay, renderOrnament } from "./templates.js";
 import { isMuted, playChime, playPop, setMuted } from "./sound.js";
 
 function easeOutBack(t) {
@@ -32,6 +32,8 @@ export function initHostMode(wsClient) {
   const themeModal = document.getElementById("theme-modal");
   const themeGrid = document.getElementById("theme-grid");
   const chkClearOnTheme = document.getElementById("chk-clear-on-theme");
+  const btnThemeSelectAll = document.getElementById("btn-theme-select-all");
+  const btnThemeApply = document.getElementById("btn-theme-apply");
   const btnCloseTheme = document.getElementById("close-theme-modal");
   const btnShowTheme = document.getElementById("btn-show-theme");
   const btnShowQr = document.getElementById("btn-show-qr");
@@ -48,7 +50,8 @@ export function initHostMode(wsClient) {
   const btnFullscreen = document.getElementById("btn-fullscreen");
   const btnReset = document.getElementById("btn-reset-board");
 
-  let currentThemeId = "christmas";
+  let currentThemeIds = ["christmas"];
+  let draftThemeIds = new Set(["christmas"]);
   let shareUrl = `${window.location.origin}/draw`;
   let width = window.innerWidth;
   let height = window.innerHeight;
@@ -256,9 +259,10 @@ export function initHostMode(wsClient) {
 
   loadShareInfo();
 
-  function applyTheme(themeId) {
-    currentThemeId = themeId || "christmas";
-    const theme = getThemeById(currentThemeId);
+  function applyTheme(themeIds) {
+    currentThemeIds = Array.isArray(themeIds) && themeIds.length > 0 ? themeIds : ["christmas"];
+    draftThemeIds = new Set(currentThemeIds);
+    const theme = resolveThemeDisplay(currentThemeIds);
     wallTitleEl.textContent = theme.title;
     btnShowTheme.textContent = `🎨 주제: ${theme.name}`;
     if (qrCurrentThemeEl) qrCurrentThemeEl.textContent = theme.name;
@@ -268,26 +272,49 @@ export function initHostMode(wsClient) {
   function renderThemeGrid() {
     if (!themeGrid) return;
     themeGrid.innerHTML = "";
-    for (const t of THEMES) {
+    const selectable = THEMES.filter((t) => t.id !== "party");
+    for (const t of selectable) {
+      const checked = draftThemeIds.has(t.id);
       const card = document.createElement("button");
       card.type = "button";
-      card.className = "theme-option-card" + (t.id === currentThemeId ? " active" : "");
-      card.innerHTML = `<div class="theme-option-name">${t.name}</div><div class="theme-option-desc">${t.desc}</div>`;
+      card.className = "theme-option-card" + (checked ? " active" : "");
+      card.innerHTML = `
+        <div class="theme-option-top">
+          <span class="theme-option-name">${t.name}</span>
+          <span class="theme-check-pill">${checked ? "✓ 선택됨" : "선택"}</span>
+        </div>
+        <div class="theme-option-desc">${t.desc}</div>
+      `;
       card.addEventListener("click", () => {
-        const clearBoard = Boolean(chkClearOnTheme?.checked);
-        wsClient.send({ type: "set_theme", themeId: t.id, clearBoard });
-        applyTheme(t.id);
-        themeModal.classList.add("hidden");
+        if (draftThemeIds.has(t.id)) {
+          if (draftThemeIds.size > 1) draftThemeIds.delete(t.id);
+        } else {
+          draftThemeIds.add(t.id);
+        }
+        renderThemeGrid();
       });
       themeGrid.appendChild(card);
     }
   }
 
-  applyTheme("christmas");
+  applyTheme(["christmas"]);
 
   btnShowTheme.addEventListener("click", () => {
+    draftThemeIds = new Set(currentThemeIds);
     renderThemeGrid();
     themeModal.classList.remove("hidden");
+  });
+  btnThemeSelectAll?.addEventListener("click", () => {
+    draftThemeIds = new Set(["christmas", "face", "animal"]);
+    renderThemeGrid();
+  });
+  btnThemeApply?.addEventListener("click", () => {
+    const nextIds = [...draftThemeIds];
+    if (nextIds.length === 0) return;
+    const clearBoard = Boolean(chkClearOnTheme?.checked);
+    wsClient.send({ type: "set_theme", themeIds: nextIds, clearBoard });
+    applyTheme(nextIds);
+    themeModal.classList.add("hidden");
   });
   btnCloseTheme.addEventListener("click", () => themeModal.classList.add("hidden"));
   themeModal.addEventListener("click", (e) => {
@@ -295,6 +322,7 @@ export function initHostMode(wsClient) {
   });
   btnQrChangeTheme?.addEventListener("click", () => {
     qrModal.classList.add("hidden");
+    draftThemeIds = new Set(currentThemeIds);
     renderThemeGrid();
     themeModal.classList.remove("hidden");
   });
@@ -433,7 +461,7 @@ export function initHostMode(wsClient) {
     const octx = out.getContext("2d");
     octx.drawImage(canvas, 0, 0);
 
-    const theme = getThemeById(currentThemeId);
+    const theme = resolveThemeDisplay(currentThemeIds);
     octx.save();
     octx.scale(dpr, dpr);
     const fontSize = Math.max(40, Math.min(74, width * 0.052));
@@ -527,14 +555,14 @@ export function initHostMode(wsClient) {
   wsClient.onMessage((msg) => {
     if (msg.type === "init") {
       clientCountEl.textContent = `접속 ${msg.clientCount || 1}명`;
-      if (msg.themeId) applyTheme(msg.themeId);
+      if (msg.themeIds || msg.themeId) applyTheme(msg.themeIds || [msg.themeId]);
       items.length = 0;
       revealQueue.length = 0;
       activeReveal = null;
       for (const orn of msg.ornaments || []) addItemImmediately(orn);
       updateStats();
     } else if (msg.type === "theme_changed") {
-      applyTheme(msg.themeId);
+      applyTheme(msg.themeIds || [msg.themeId]);
     } else if (msg.type === "client_count") {
       clientCountEl.textContent = `접속 ${msg.clientCount || 1}명`;
     } else if (msg.type === "ornament_added" && msg.ornament) {
@@ -571,7 +599,7 @@ export function initHostMode(wsClient) {
     ctx.save();
     ctx.scale(dpr, dpr);
 
-    const theme = getThemeById(currentThemeId);
+    const theme = resolveThemeDisplay(currentThemeIds);
     const grad = ctx.createRadialGradient(width * 0.5, height * 0.35, 40, width * 0.5, height * 0.5, Math.max(width, height) * 0.78);
     grad.addColorStop(0, theme.bgTop);
     grad.addColorStop(1, theme.bgBottom);
